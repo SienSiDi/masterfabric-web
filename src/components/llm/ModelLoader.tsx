@@ -9,11 +9,19 @@ import { createSession } from "@/lib/api/llm";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+function checkWebGPUSupport(): { ok: boolean; reason?: string } {
+  if (typeof navigator === "undefined") return { ok: false, reason: "Server-side rendering" };
+  const nav = navigator as Navigator & { gpu?: unknown };
+  if (!nav.gpu) return { ok: false, reason: "WebGPU API not available in this browser." };
+  return { ok: true };
+}
 
 export function ModelLoader() {
   const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(false);
+  const [webgpu, setWebgpu] = useState<{ ok: boolean; reason?: string }>({ ok: true });
   const setEngineReady = useChatStore((s) => s.setEngineReady);
   const setModelId = useChatStore((s) => s.setModelId);
   const setModelHash = useChatStore((s) => s.setModelHash);
@@ -22,6 +30,10 @@ export function ModelLoader() {
   const setLoadStatus = useChatStore((s) => s.setLoadStatus);
   const loadProgress = useChatStore((s) => s.loadProgress);
   const loadStatus = useChatStore((s) => s.loadStatus);
+
+  useEffect(() => {
+    setWebgpu(checkWebGPUSupport());
+  }, []);
 
   const { data: config, isLoading: configLoading } = useQuery({
     queryKey: ["config"],
@@ -78,6 +90,30 @@ export function ModelLoader() {
 
   return (
     <div className="flex items-center justify-center py-20">
+      {!webgpu.ok && (
+        <Card className="max-w-md w-full border-destructive/50 bg-destructive/5 mb-6">
+          <CardHeader>
+            <CardTitle className="text-destructive">WebGPU Not Supported</CardTitle>
+            <CardDescription>
+              {webgpu.reason ?? "Your browser does not support WebGPU."} WebLLM requires WebGPU to
+              run LLMs locally in the browser.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <p className="font-medium text-foreground mb-2">Supported browsers:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><strong>Chrome 113+</strong> (Desktop &amp; Android)</li>
+              <li><strong>Edge 113+</strong></li>
+              <li><strong>Firefox 141+</strong> (experimental flag)</li>
+              <li><strong>Safari 18+</strong> (macOS Sequoia only, partial)</li>
+            </ul>
+            <p className="mt-3">
+              Open this page in Chrome or Edge to use WebLLM.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="max-w-md w-full">
         <CardHeader>
           <CardTitle>Load Gemma</CardTitle>
@@ -115,7 +151,7 @@ export function ModelLoader() {
           <Button
             size="lg"
             onClick={onLoad}
-            disabled={loading}
+            disabled={loading || !webgpu.ok}
             className="w-full"
           >
             {loading ? "Loading model..." : `Load ${modelId}`}
