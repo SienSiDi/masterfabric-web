@@ -9,9 +9,9 @@ Single-page Next.js 16 SPA for the MasterFabric Web-LLM stack. Runs **Gemma in t
 | Day | View | Status |
 |-----|------|--------|
 | 10 | MV1 Auth (login/register/forgot-password) + scaffold | ✅ done |
-| 11 | MV2 Subviews (dashboard/sessions/monitoring/settings) | ⏳ next |
-| 12 | MV3 Web LLM (WebLLM + Gemma loader + chat + event submit) | pending |
-| 13 | Vercel deploy + event submission loop | pending |
+| 11 | MV2 Subviews (dashboard/sessions/monitoring/settings) | ✅ done |
+| 12 | MV3 Web LLM (WebLLM + Gemma loader + chat + event submit) | ✅ done |
+| 13 | Vercel deploy + event submission loop | ✅ done |
 
 ## Stack
 
@@ -60,5 +60,22 @@ See [`.cursor/AGENTS.md`](./.cursor/AGENTS.md) for full conventions.
 | Day | EPs |
 |-----|-----|
 | 10 | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /me` (5/20) |
-| 11 | + `GET /me/sessions`, `GET /llm/monitoring`, `GET/PUT /config` |
-| 12 | + `GET /llm/models`, `POST /llm/sessions`, `POST /llm/sessions/{id}/events`, `POST /llm/sessions/{id}/score` |
+| 11 | + `GET /me/sessions`, `GET /llm/monitoring`, `GET/PUT /config` (9/20) |
+| 12 | + `GET /llm/models`, `POST /llm/sessions`, `POST /llm/sessions/{id}/events`, `POST /llm/sessions/{id}/score` (13/20) |
+
+## Deploy to Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Link project
+vercel link
+
+# Set env var
+vercel env add NEXT_PUBLIC_API_BASE_URL production
+# → https://mf-masterfabric-backend.onrender.com
+
+# Deploy
+vercel --prod
+```
