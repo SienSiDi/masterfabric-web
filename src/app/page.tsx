@@ -3,10 +3,21 @@
 import { Suspense, useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { parseViewState, type View, type Sub } from "@/lib/view-router";
+import { parseViewState, type View, type AppSub } from "@/lib/view-router";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AppShell } from "@/components/app/AppShell";
 import { LlmView } from "@/components/llm/LlmView";
+import { Dashboard } from "@/components/app/Dashboard";
+import { Sessions } from "@/components/app/Sessions";
+import { Monitoring } from "@/components/app/Monitoring";
+import { Settings } from "@/components/app/Settings";
+
+const APP_SUB_VIEWS: Record<AppSub, React.ComponentType> = {
+  dashboard: Dashboard,
+  sessions: Sessions,
+  monitoring: Monitoring,
+  settings: Settings,
+};
 
 function ViewSwitcher() {
   const searchParams = useSearchParams();
@@ -49,7 +60,13 @@ function ViewSwitcher() {
   }
 
   if (view === "app") {
-    return <AppShell sub={sub as "dashboard" | "sessions" | "monitoring" | "settings"} />;
+    const appSub = sub as AppSub;
+    const SubComponent = APP_SUB_VIEWS[appSub] ?? Dashboard;
+    return (
+      <AppShell sub={appSub}>
+        <SubComponent />
+      </AppShell>
+    );
   }
 
   return <LlmView sub={sub as "model-loader" | "chat" | "event-submit"} />;
