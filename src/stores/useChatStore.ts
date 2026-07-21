@@ -36,9 +36,44 @@ interface ChatState {
   setLoadStatus: (s: string) => void;
   markScored: (eventId: string) => void;
   clear: () => void;
+  hydrate: () => void;
 }
 
 let msgCounter = 0;
+
+const CHAT_KEY = "mf_chat_v1";
+
+interface PersistedChat {
+  sessionId: string | null;
+  modelId: string | null;
+  modelHash: string | null;
+  engineReady: boolean;
+}
+
+function loadPersistedChat(): PersistedChat | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CHAT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as PersistedChat;
+  } catch {
+    return null;
+  }
+}
+
+function persistChat(s: PersistedChat) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CHAT_KEY, JSON.stringify(s));
+  } catch {
+    // ignore
+  }
+}
+
+function saveCurrent() {
+  const { sessionId, modelId, modelHash, engineReady } = useChatStore.getState();
+  persistChat({ sessionId, modelId, modelHash, engineReady });
+}
 
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
@@ -64,12 +99,12 @@ export const useChatStore = create<ChatState>((set) => ({
       return { messages: msgs };
     }),
 
-  setSessionId: (id) => set({ sessionId: id }),
-  setModelId: (id) => set({ modelId: id }),
-  setModelHash: (hash) => set({ modelHash: hash }),
+  setSessionId: (id) => { set({ sessionId: id }); saveCurrent(); },
+  setModelId: (id) => { set({ modelId: id }); saveCurrent(); },
+  setModelHash: (hash) => { set({ modelHash: hash }); saveCurrent(); },
   setLoading: (v) => set({ loading: v }),
   setStreaming: (v) => set({ streaming: v }),
-  setEngineReady: (v) => set({ engineReady: v }),
+  setEngineReady: (v) => { set({ engineReady: v }); saveCurrent(); },
   setLoadProgress: (p) => set({ loadProgress: p }),
   setLoadStatus: (s) => set({ loadStatus: s }),
 
@@ -80,13 +115,27 @@ export const useChatStore = create<ChatState>((set) => ({
       ),
     })),
 
-  clear: () =>
+  clear: () => {
     set({
       messages: [],
       sessionId: null,
       loading: false,
       streaming: false,
-    }),
+    });
+    persistChat({ sessionId: null, modelId: null, modelHash: null, engineReady: false });
+  },
+
+  hydrate: () => {
+    const p = loadPersistedChat();
+    if (p) {
+      set({
+        sessionId: p.sessionId,
+        modelId: p.modelId,
+        modelHash: p.modelHash,
+        engineReady: p.engineReady,
+      });
+    }
+  },
 }));
 
 export function nextMsgId(): string {

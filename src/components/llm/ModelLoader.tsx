@@ -65,13 +65,17 @@ export function ModelLoader() {
       setModelId(modelId);
       setModelHash(`sha256:${modelId}`);
 
-      // Create a BE session
+      // Create a BE session (requires auth)
       try {
         const sess = await createSession(modelId, `sha256:${modelId}`);
         setSessionId(sess.sessionId);
-      } catch {
-        // BE session is optional — chat works without it
-        console.warn("Failed to create BE session; events won't be reported.");
+      } catch (err: unknown) {
+        const status = (err as { status?: number })?.status;
+        if (status === 401) {
+          toast.warning("Login required to record sessions. Chat works but events won't be saved.");
+        } else {
+          console.warn("Failed to create BE session; events won't be reported.");
+        }
       }
 
       setEngineReady(true);
