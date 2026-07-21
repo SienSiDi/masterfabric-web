@@ -10,24 +10,34 @@ Backend is the live Go API at `https://mf-masterfabric-backend.onrender.com` (20
 ```
 src/
 ├── app/
-│   ├── layout.tsx          # root layout + Toaster
-│   ├── page.tsx            # single route; Suspense + ViewSwitcher reads ?view&?sub
-│   └── globals.css         # Tailwind v4 + shadcn theme (oklch vars)
+│   ├── layout.tsx              # root layout + QueryProvider + Toaster
+│   ├── page.tsx                # single route; Suspense + ViewSwitcher reads ?view&?sub
+│   └── globals.css             # Tailwind v4 + shadcn theme (oklch vars)
 ├── components/
-│   ├── auth/AuthCard.tsx   # MV1: LoginForm, RegisterForm, ForgotPasswordForm
-│   ├── app/AppShell.tsx    # MV2: shell + nav (Day 11 fills subviews)
-│   ├── llm/LlmView.tsx     # MV3: WebLLM + Gemma (Day 12)
-│   └── ui/                 # shadcn primitives (base-ui, not radix)
+│   ├── auth/AuthCard.tsx       # MV1: LoginForm, RegisterForm, ForgotPasswordForm
+│   ├── app/
+│   │   ├── AppShell.tsx        # MV2: topbar + left nav + content area
+│   │   ├── Dashboard.tsx       # stat cards + latency + tokens + byModel
+│   │   ├── Sessions.tsx        # table (admin) or empty CTA (user)
+│   │   ├── Monitoring.tsx      # recharts charts, admin-only
+│   │   └── Settings.tsx        # profile edit, change password, sessions list
+│   ├── llm/LlmView.tsx         # MV3: WebLLM + Gemma (Day 12)
+│   ├── providers/QueryProvider.tsx  # TanStack React Query client
+│   └── ui/                     # shadcn primitives (base-ui, not radix)
+├── hooks/
+│   ├── useMe.ts                # GET /me query
+│   ├── useMonitoring.ts        # GET /llm/monitoring query (admin-only)
+│   └── useSessions.ts          # GET /me/sessions query
 ├── lib/
-│   ├── config.ts           # API_BASE_URL
-│   ├── view-router.ts      # ?view=auth|app|llm&sub=... parser (typed)
+│   ├── config.ts               # API_BASE_URL
+│   ├── view-router.ts          # ?view=auth|app|llm&sub=... parser (typed)
 │   └── api/
-│       ├── http.ts         # fetch wrapper: Bearer + refresh-on-401 + retry-once
-│       ├── auth.ts         # register/login/refresh/logout/me/updateMe/changePassword/sessions
-│       ├── llm.ts          # models/sessions/events/score/monitoring
-│       └── types.ts        # all BE response shapes
+│       ├── http.ts             # fetch wrapper: Bearer + refresh-on-401 + retry-once
+│       ├── auth.ts             # register/login/refresh/logout/me/updateMe/changePassword/sessions
+│       ├── llm.ts              # models/sessions/events/score/monitoring
+│       └── types.ts            # all BE response shapes
 └── stores/
-    └── useAuthStore.ts     # Zustand: user + tokens, sessionStorage persistence
+    └── useAuthStore.ts         # Zustand: user + tokens, sessionStorage persistence
 ```
 
 ## Conventions
