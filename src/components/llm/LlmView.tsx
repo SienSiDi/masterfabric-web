@@ -1,41 +1,66 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import type { LlmSub } from "@/lib/view-router";
+import { useChatStore } from "@/stores/useChatStore";
+import { ModelLoader } from "./ModelLoader";
+import { ChatWindow } from "./ChatWindow";
+import { PromptComposer } from "./PromptComposer";
+import { Button } from "@/components/ui/button";
+import { buildViewUrl } from "@/lib/view-router";
+import { useRouter } from "next/navigation";
+import { RotateCcw } from "lucide-react";
 
-const SUB_LABELS: Record<LlmSub, string> = {
-  "model-loader": "Model Loader",
-  chat: "Chat",
-  "event-submit": "Event Submit",
-};
+export function LlmView({ sub }: { sub: "model-loader" | "chat" | "event-submit" }) {
+  const router = useRouter();
+  const engineReady = useChatStore((s) => s.engineReady);
+  const clear = useChatStore((s) => s.clear);
 
-export function LlmView({ sub }: { sub: LlmSub }) {
+  function onNewChat() {
+    clear();
+    router.push(buildViewUrl("llm", "model-loader"));
+  }
+
+  // Show model loader if engine not ready or explicitly on model-loader sub
+  if (!engineReady || sub === "model-loader") {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="flex items-center justify-between border-b border-border px-6 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-semibold tracking-tight">MasterFabric</span>
+            <span className="text-xs text-muted-foreground">Web-LLM</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => router.push(buildViewUrl("app", "dashboard"))}>
+            ← Back to app
+          </Button>
+        </header>
+        <ModelLoader />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-6">
-      <Card className="max-w-3xl w-full">
-        <CardHeader>
-          <CardTitle>{SUB_LABELS[sub]} — coming on Day 12</CardTitle>
-          <CardDescription>
-            Master View 3 will load Gemma in your browser via WebLLM and report inference events
-            to the backend for raw LLM monitoring + decision scoring.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            This view will use <code className="rounded bg-muted px-1.5 py-0.5 text-xs">@mlc-ai/web-llm</code>{" "}
-            to run <code className="rounded bg-muted px-1.5 py-0.5 text-xs">gemma-2b-q4f32_1-MLC</code>{" "}
-            entirely client-side, then POST each inference event to{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-              POST /api/v1/llm/sessions/&#123;id&#125;/events
-            </code>{" "}
-            and score it via{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-              POST /api/v1/llm/sessions/&#123;id&#125;/score
-            </code>
-            .
-          </p>
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen flex-col">
+      <header className="flex items-center justify-between border-b border-border px-6 py-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base font-semibold tracking-tight">MasterFabric</span>
+          <span className="text-xs text-muted-foreground">Web-LLM</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onNewChat} className="gap-1.5">
+            <RotateCcw className="size-3.5" />
+            New chat
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => router.push(buildViewUrl("app", "dashboard"))}>
+            ← Back to app
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex flex-1 flex-col overflow-hidden p-6">
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden">
+          <ChatWindow />
+        </div>
+        <PromptComposer />
+      </main>
     </div>
   );
 }
