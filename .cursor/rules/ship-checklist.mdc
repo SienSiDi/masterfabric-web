@@ -1,0 +1,17 @@
+---
+description: Pre-deploy checklist before pushing to Vercel
+globs: src/**/*.tsx,src/**/*.ts
+---
+
+# Ship Checklist
+
+Before every deploy to Vercel:
+
+- `npm run lint` passes
+- `npm run build` passes (catches Suspense + type errors)
+- `NEXT_PUBLIC_API_BASE_URL` set in Vercel project env vars
+- Backend `/health/live` returns 200 (check Render dashboard)
+- Smoke test in browser: register → login → see app shell → logout → back to auth
+- No secrets in client code (all env vars must be `NEXT_PUBLIC_*` prefixed)
+- `useSearchParams` wrapped in `<Suspense>`
+- No `console.log` in committed code (use `toast` for user-facing, `console.error` for dev-only)

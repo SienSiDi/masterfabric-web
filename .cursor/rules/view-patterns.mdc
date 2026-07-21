@@ -1,0 +1,19 @@
+---
+description: URL-driven view switching for the single-page app
+globs: src/app/page.tsx,src/components/**/*.tsx,src/lib/view-router.ts
+---
+
+# View Pattern
+
+View state lives in the URL: `?view=auth|app|llm&sub=...`.
+
+- Use `parseViewState(viewParam, subParam, defaultView)` from `@/lib/view-router` to read.
+- Use `buildViewUrl(view, sub)` + `router.push()` (or `router.replace()`) to navigate.
+- Never store the current view in React state.
+- `defaultView` = `"auth"` when no user, `"app"` when authenticated.
+- `useSearchParams` MUST be wrapped in a `<Suspense>` boundary (Next.js 16 prerender requirement).
+
+Valid subs:
+- `auth`: `login` | `register` | `forgot-password`
+- `app`: `dashboard` | `sessions` | `monitoring` | `settings`
+- `llm`: `model-loader` | `chat` | `event-submit`

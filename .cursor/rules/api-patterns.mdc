@@ -1,0 +1,15 @@
+---
+description: API client patterns — http wrapper, auth store, error handling
+globs: src/lib/api/*.ts,src/stores/*.ts
+---
+
+# API Pattern
+
+- All BE calls go through `@/lib/api/http.ts` (`httpGet`, `httpPost`, `httpPut`, `httpDel`).
+- The wrapper injects `Authorization: Bearer <accessToken>` from the auth store.
+- On 401: calls `POST /auth/refresh` once, retries the original request. On second 401: clears store (user must re-login).
+- Throws `HttpError` with `.status` and `.body` (parsed `ApiError`).
+- In forms: `try { ... } catch (err) { if (err instanceof HttpError) { map status -> toast } }`.
+- Common status mappings: 401 → "invalid credentials", 409 → "email taken", 422 → validation, 429 → rate limited.
+- API functions are grouped by domain: `auth.ts`, `llm.ts`. Types in `types.ts`.
+- `auth: false` option for public endpoints (register, login, refresh, GET /config).
