@@ -19,8 +19,8 @@ export function LlmView({ sub }: { sub: "model-loader" | "chat" | "event-submit"
     router.push(buildViewUrl("llm", "model-loader"));
   }
 
-  // Show model loader if engine not ready or explicitly on model-loader sub
-  if (!engineReady || sub === "model-loader") {
+  // Show model loader if engine not ready; if ready but on model-loader, redirect to chat
+  if (!engineReady) {
     return (
       <div className="flex min-h-screen flex-col">
         <header className="flex items-center justify-between border-b border-border px-6 py-3">

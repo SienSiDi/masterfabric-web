@@ -10,6 +10,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { buildViewUrl } from "@/lib/view-router";
 
 function checkWebGPUSupport(): { ok: boolean; reason?: string } {
   if (typeof navigator === "undefined") return { ok: false, reason: "Server-side rendering" };
@@ -19,6 +21,7 @@ function checkWebGPUSupport(): { ok: boolean; reason?: string } {
 }
 
 export function ModelLoader() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const [loading, setLoading] = useState(false);
   const [webgpu, setWebgpu] = useState<{ ok: boolean; reason?: string }>({ ok: true });
@@ -73,6 +76,7 @@ export function ModelLoader() {
 
       setEngineReady(true);
       toast.success("Model loaded. Start chatting!");
+      router.push(buildViewUrl("llm", "chat"));
     } catch (err: unknown) {
       console.error("Failed to load model:", err);
       const msg = err instanceof Error ? err.message : String(err);
