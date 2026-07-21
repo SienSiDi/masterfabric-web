@@ -72,9 +72,21 @@ export function ModelLoader() {
 
       setEngineReady(true);
       toast.success("Model loaded. Start chatting!");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to load model:", err);
-      toast.error("Failed to load model. Check your browser supports WebGPU.");
+      const msg = err instanceof Error ? err.message : String(err);
+
+      if (/WebGPU/i.test(msg)) {
+        toast.error(`WebGPU error: ${msg}. Use Chrome 113+ or Edge 113+.`);
+      } else if (/ShaderF16/i.test(msg)) {
+        toast.error("GPU doesn't support float16 shaders. Try a different browser or device.");
+      } else if (/DeviceLost/i.test(msg)) {
+        toast.error("GPU device lost (likely out of memory). Close other GPU-heavy tabs and retry.");
+      } else if (/OOM|out of memory/i.test(msg)) {
+        toast.error("Out of GPU memory. Close other tabs using GPU and retry.");
+      } else {
+        toast.error(`Model load failed: ${msg}`);
+      }
     } finally {
       setLoading(false);
     }
