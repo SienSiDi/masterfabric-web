@@ -44,7 +44,7 @@ export function ModelLoader() {
     staleTime: 300_000,
   });
 
-  const MODEL_ID = "gemma-2-2b-it-q4f32_1-MLC";
+  const MODEL_ID = "qwen2.5-3b-instruct-q4f32_1-MLC";
   const modelId = MODEL_ID;
   const estimatedMB = config
     ? Math.round(config.webllm.estimatedBytes / 1_000_000)
