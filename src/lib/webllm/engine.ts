@@ -14,6 +14,10 @@ export async function ensureEngine(
   const webllm = await import("@mlc-ai/web-llm");
   const engine = await webllm.CreateMLCEngine(modelId, {
     initProgressCallback: onProgress,
+    appConfig: {
+      ...webllm.prebuiltAppConfig,
+      cacheBackend: "indexeddb",
+    },
   });
 
   cachedEngine = engine;
