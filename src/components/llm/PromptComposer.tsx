@@ -7,14 +7,17 @@ import { getCachedEngine } from "@/lib/webllm/engine";
 import { recordEvent } from "@/lib/api/llm";
 import { toast } from "sonner";
 import { Send, Settings2, ChevronDown } from "lucide-react";
+import { SYSTEM_PROMPT } from "@/lib/bot/persona";
 
 const MAX_CHARS = 4000;
 
 const QUICK_PROMPTS = [
-  "Explain quantum computing in simple terms",
-  "Write a Python function to sort a list",
-  "What are the benefits of meditation?",
-  "How does photosynthesis work?",
+  "Son izlediğim film hakkında konuşalım",
+  "Bu kitap hakkında ne düşünüyorsun?",
+  "Bana film önerir misin?",
+  "Klasik filmler hakkında ne düşünüyorsun?",
+  "Yönetmenlerin üslupları hakkında konuşalım",
+  "Bu roman hakkında ne diyorsun?",
 ];
 
 export function PromptComposer() {
@@ -68,7 +71,10 @@ export function PromptComposer() {
 
       const t0 = performance.now();
       const response = await engine.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
         stream: true,
         stream_options: { include_usage: true },
         max_tokens: 1024,
