@@ -63,8 +63,6 @@ interface ChatState {
   setLoadProgress: (p: number) => void;
   setLoadStatus: (s: string) => void;
   markScored: (eventId: string) => void;
-  updateMetrics: (msg: ChatMessage) => void;
-  saveSessionToHistory: () => void;
   clear: () => void;
   hydrate: () => void;
 }
@@ -155,7 +153,7 @@ function computeMetrics(messages: ChatMessage[]): SessionMetrics {
   };
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
+export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   sessionId: null,
   modelId: null,
@@ -168,11 +166,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   metrics: computeMetrics([]),
   history: loadHistory(),
 
-  addMessage: (msg) => {
-    set((s) => ({ messages: [...s.messages, msg] }));
-    const state = get();
-    state.updateMetrics({ ...state.messages, ...msg } as unknown as ChatMessage);
-  },
+  addMessage: (msg) =>
+    set((s) => ({ messages: [...s.messages, msg] })),
 
   updateLastAssistant: (content) =>
     set((s) => {
@@ -181,7 +176,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (last && last.role === "assistant") {
         msgs[msgs.length - 1] = { ...last, content };
       }
-      return { messages: msgs, metrics: computeMetrics(msgs) };
+      return { messages: msgs };
     }),
 
   setSessionId: (id) => { set({ sessionId: id }); saveCurrent(); },
@@ -194,42 +189,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setLoadStatus: (s) => set({ loadStatus: s }),
 
   markScored: (eventId) =>
-    set((s) => {
-      const msgs = s.messages.map((m) =>
+    set((s) => ({
+      messages: s.messages.map((m) =>
         m.eventId === eventId ? { ...m, scored: true } : m
-      );
-      return { messages: msgs, metrics: computeMetrics(msgs) };
-    }),
-
-  updateMetrics: (msg) =>
-    set((s) => ({ metrics: computeMetrics(s.messages) })),
-
-  saveSessionToHistory: () => {
-    const { messages, sessionId, modelId, metrics } = get();
-    if (messages.length === 0 || !modelId) return;
-
-    const record: SessionRecord = {
-      id: sessionId ?? `local_${Date.now()}`,
-      modelId,
-      startedAt: messages[0]?.timestamp ?? Date.now(),
-      endedAt: Date.now(),
-      messageCount: messages.length,
-      metrics,
-    };
-
-    const history = [...get().history, record];
-    set({ history });
-    persistHistory(history);
-  },
+      ),
+    })),
 
   clear: () => {
-    get().saveSessionToHistory();
     set({
       messages: [],
       sessionId: null,
       loading: false,
       streaming: false,
-      metrics: computeMetrics([]),
     });
     persistChat({ sessionId: null, modelId: null, modelHash: null, engineReady: false });
   },

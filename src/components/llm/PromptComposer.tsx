@@ -24,15 +24,13 @@ export function PromptComposer() {
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const {
-    streaming,
-    sessionId,
-    addMessage,
-    updateLastAssistant,
-    setStreaming,
-    metrics,
-    modelId,
-  } = useChatStore();
+  const streaming = useChatStore((s) => s.streaming);
+  const sessionId = useChatStore((s) => s.sessionId);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const updateLastAssistant = useChatStore((s) => s.updateLastAssistant);
+  const setStreaming = useChatStore((s) => s.setStreaming);
+  const metrics = useChatStore((s) => s.metrics);
+  const modelId = useChatStore((s) => s.modelId);
 
   const charCount = input.length;
   const overLimit = charCount > MAX_CHARS;
