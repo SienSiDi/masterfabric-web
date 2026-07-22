@@ -3,9 +3,41 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star, Film, BookOpen, MessageSquare, Heart, TrendingUp } from "lucide-react";
 import { useMediaStore } from "@/stores/useMediaStore";
+import { useMemo } from "react";
+
+function useStats() {
+  const films = useMediaStore((s) => s.films);
+  const books = useMediaStore((s) => s.books);
+  const discussions = useMediaStore((s) => s.discussions);
+  return useMemo(() => {
+    const genreCount = new Map<string, number>();
+    films.forEach((f) => f.genre.forEach((g) => genreCount.set(g, (genreCount.get(g) || 0) + 1)));
+    books.forEach((b) => b.genre.forEach((g) => genreCount.set(g, (genreCount.get(g) || 0) + 1)));
+    const topGenres = Array.from(genreCount.entries())
+      .map(([genre, count]) => ({ genre, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+    const recentActivity = [
+      ...films.map((f) => ({ type: "film" as const, title: f.title, date: f.watchedAt })),
+      ...books.map((b) => ({ type: "book" as const, title: b.title, date: b.readAt })),
+      ...discussions.map((d) => ({ type: "discussion" as const, title: d.title, date: d.createdAt })),
+    ]
+      .sort((a, b) => b.date - a.date)
+      .slice(0, 10);
+    return {
+      totalFilms: films.length,
+      totalBooks: books.length,
+      totalDiscussions: discussions.length,
+      favoriteFilms: films.filter((f) => f.favorited).length,
+      favoriteBooks: books.filter((b) => b.favorited).length,
+      topGenres,
+      recentActivity,
+    };
+  }, [films, books, discussions]);
+}
 
 export function CinemaStats() {
-  const stats = useMediaStore((s) => s.getStats());
+  const stats = useStats();
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -64,7 +96,7 @@ function StatCard({
 }
 
 export function TopGenres() {
-  const stats = useMediaStore((s) => s.getStats());
+  const stats = useStats();
 
   if (stats.topGenres.length === 0) {
     return (
@@ -117,7 +149,7 @@ export function TopGenres() {
 }
 
 export function RecentActivity() {
-  const stats = useMediaStore((s) => s.getStats());
+  const stats = useStats();
 
   if (stats.recentActivity.length === 0) {
     return (
