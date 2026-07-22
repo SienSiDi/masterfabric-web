@@ -93,6 +93,8 @@ export function ModelLoader() {
         toast.error("GPU device lost (likely out of memory). Close other GPU-heavy tabs and retry.");
       } else if (/OOM|out of memory/i.test(msg)) {
         toast.error("Out of GPU memory. Close other tabs using GPU and retry.");
+      } else if (/Cache\.add|network error/i.test(msg)) {
+        toast.error("Download interrupted. Clear browser cache (DevTools > Application > Cache Storage > webllm) and retry.", { duration: 8000 });
       } else {
         toast.error(`Model load failed: ${msg}`);
       }
