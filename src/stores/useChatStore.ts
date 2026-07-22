@@ -12,32 +12,6 @@ export interface ChatMessage {
   tokensIn?: number;
   tokensOut?: number;
   scored?: boolean;
-  modelId?: string;
-}
-
-export interface SessionMetrics {
-  totalMessages: number;
-  userMessages: number;
-  assistantMessages: number;
-  avgLatencyMs: number;
-  totalTokensIn: number;
-  totalTokensOut: number;
-  totalTokens: number;
-  avgTokensPerMessage: number;
-  tokensPerSecond: number;
-  errorCount: number;
-  scoredCount: number;
-  avgScore: number;
-  safetyFlags: number;
-}
-
-export interface SessionRecord {
-  id: string;
-  modelId: string;
-  startedAt: number;
-  endedAt?: number;
-  messageCount: number;
-  metrics: SessionMetrics;
 }
 
 interface ChatState {
@@ -50,8 +24,6 @@ interface ChatState {
   engineReady: boolean;
   loadProgress: number;
   loadStatus: string;
-  metrics: SessionMetrics;
-  history: SessionRecord[];
   addMessage: (msg: ChatMessage) => void;
   updateLastAssistant: (content: string) => void;
   setSessionId: (id: string) => void;
@@ -70,7 +42,6 @@ interface ChatState {
 let msgCounter = 0;
 
 const CHAT_KEY = "mf_chat_v1";
-const HISTORY_KEY = "mf_history_v1";
 
 interface PersistedChat {
   sessionId: string | null;
@@ -99,58 +70,9 @@ function persistChat(s: PersistedChat) {
   }
 }
 
-function loadHistory(): SessionRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(HISTORY_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as SessionRecord[];
-  } catch {
-    return [];
-  }
-}
-
-function persistHistory(history: SessionRecord[]) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-20)));
-  } catch {
-    // ignore
-  }
-}
-
 function saveCurrent() {
   const { sessionId, modelId, modelHash, engineReady } = useChatStore.getState();
   persistChat({ sessionId, modelId, modelHash, engineReady });
-}
-
-function computeMetrics(messages: ChatMessage[]): SessionMetrics {
-  const userMsgs = messages.filter((m) => m.role === "user");
-  const assistantMsgs = messages.filter((m) => m.role === "assistant");
-  const scoredMsgs = messages.filter((m) => m.scored);
-  const withLatency = messages.filter((m) => m.latencyMs !== undefined);
-
-  const totalLatency = withLatency.reduce((sum, m) => sum + (m.latencyMs ?? 0), 0);
-  const totalTokensIn = messages.reduce((sum, m) => sum + (m.tokensIn ?? 0), 0);
-  const totalTokensOut = messages.reduce((sum, m) => sum + (m.tokensOut ?? 0), 0);
-  const totalTokens = totalTokensIn + totalTokensOut;
-  const totalDuration = withLatency.reduce((sum, m) => sum + (m.latencyMs ?? 0), 0);
-
-  return {
-    totalMessages: messages.length,
-    userMessages: userMsgs.length,
-    assistantMessages: assistantMsgs.length,
-    avgLatencyMs: withLatency.length > 0 ? Math.round(totalLatency / withLatency.length) : 0,
-    totalTokensIn,
-    totalTokensOut,
-    totalTokens,
-    avgTokensPerMessage: assistantMsgs.length > 0 ? Math.round(totalTokensOut / assistantMsgs.length) : 0,
-    tokensPerSecond: totalDuration > 0 ? Math.round((totalTokensOut / totalDuration) * 1000) : 0,
-    errorCount: messages.filter((m) => m.content.startsWith("Error:")).length,
-    scoredCount: scoredMsgs.length,
-    avgScore: 0,
-    safetyFlags: 0,
-  };
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -163,8 +85,6 @@ export const useChatStore = create<ChatState>((set) => ({
   engineReady: false,
   loadProgress: 0,
   loadStatus: "",
-  metrics: computeMetrics([]),
-  history: loadHistory(),
 
   addMessage: (msg) =>
     set((s) => ({ messages: [...s.messages, msg] })),
