@@ -6,13 +6,23 @@ import { useChatStore, nextMsgId } from "@/stores/useChatStore";
 import { getCachedEngine } from "@/lib/webllm/engine";
 import { recordEvent } from "@/lib/api/llm";
 import { toast } from "sonner";
-import { Send } from "lucide-react";
+import { Send, Settings2, ChevronDown } from "lucide-react";
 import { SYSTEM_PROMPT } from "@/lib/bot/persona";
 
 const MAX_CHARS = 4000;
 
+const QUICK_PROMPTS = [
+  "Son izlediğim film hakkında konuşalım",
+  "Bu kitap hakkında ne düşünüyorsun?",
+  "Bana film önerir misin?",
+  "Klasik filmler hakkında ne düşünüyorsun?",
+  "Yönetmenlerin üslupları hakkında konuşalım",
+  "Bu roman hakkında ne diyorsun?",
+];
+
 export function PromptComposer() {
   const [input, setInput] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const {
     streaming,
@@ -20,6 +30,8 @@ export function PromptComposer() {
     addMessage,
     updateLastAssistant,
     setStreaming,
+    metrics,
+    modelId,
   } = useChatStore();
 
   const charCount = input.length;
@@ -44,6 +56,7 @@ export function PromptComposer() {
       role: "assistant",
       content: "",
       timestamp: Date.now(),
+      modelId: modelId ?? undefined,
     });
 
     setStreaming(true);
@@ -89,6 +102,8 @@ export function PromptComposer() {
       if (!tokensIn) tokensIn = Math.round(prompt.length / 4);
       if (!tokensOut) tokensOut = Math.round(fullContent.length / 4);
 
+      const tokensPerSecond = latencyMs > 0 ? Math.round((tokensOut / latencyMs) * 1000) : 0;
+
       if (sessionId) {
         try {
           const evt = await recordEvent(sessionId, {
@@ -105,13 +120,24 @@ export function PromptComposer() {
             useChatStore.setState({
               messages: [
                 ...msgs.slice(0, -1),
-                { ...lastAssistant, eventId: evt.eventId, latencyMs, tokensIn, tokensOut },
+                {
+                  ...lastAssistant,
+                  eventId: evt.eventId,
+                  latencyMs,
+                  tokensIn,
+                  tokensOut,
+                  modelId: modelId ?? undefined,
+                },
               ],
             });
           }
         } catch {
           // non-blocking
         }
+      }
+
+      if (tokensPerSecond > 0) {
+        toast.success(`${tokensPerSecond} tokens/sec`, { duration: 2000 });
       }
     } catch (err) {
       console.error("Chat error:", err);
@@ -129,6 +155,11 @@ export function PromptComposer() {
     }
   }
 
+  function insertQuickPrompt(prompt: string) {
+    setInput(prompt);
+    textareaRef.current?.focus();
+  }
+
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-4">
       <div className="relative">
@@ -137,7 +168,7 @@ export function PromptComposer() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Type a message..."
+          placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
           rows={3}
           disabled={streaming}
           className="w-full resize-none rounded-lg border border-input bg-transparent px-3 py-2 pr-12 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
@@ -158,6 +189,59 @@ export function PromptComposer() {
           </Button>
         </div>
       </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {metrics.totalMessages > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {metrics.totalMessages} messages &middot; {metrics.tokensPerSecond} tok/s
+            </span>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSettings(!showSettings)}
+          className="text-xs text-muted-foreground"
+        >
+          <Settings2 className="size-3 mr-1" />
+          Quick prompts
+          {showSettings ? <ChevronUp className="size-3 ml-1" /> : <ChevronDown className="size-3 ml-1" />}
+        </Button>
+      </div>
+
+      {showSettings && (
+        <div className="flex flex-wrap gap-2">
+          {QUICK_PROMPTS.map((prompt) => (
+            <Button
+              key={prompt}
+              variant="outline"
+              size="sm"
+              onClick={() => insertQuickPrompt(prompt)}
+              className="text-xs"
+            >
+              {prompt}
+            </Button>
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function ChevronUp({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m18 15-6-6-6 6" />
+    </svg>
   );
 }
