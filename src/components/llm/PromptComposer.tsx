@@ -3,11 +3,11 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useChatStore, nextMsgId } from "@/stores/useChatStore";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { getCachedEngine } from "@/lib/webllm/engine";
 import { recordEvent } from "@/lib/api/llm";
 import { toast } from "sonner";
 import { Send } from "lucide-react";
+import { SYSTEM_PROMPT } from "@/lib/bot/persona";
 
 const MAX_CHARS = 4000;
 
@@ -58,7 +58,10 @@ export function PromptComposer() {
 
       const t0 = performance.now();
       const response = await engine.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: prompt },
+        ],
         stream: true,
         stream_options: { include_usage: true },
         max_tokens: 1024,
