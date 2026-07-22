@@ -2,6 +2,8 @@
 
 import { useChatStore, type ChatMessage } from "@/stores/useChatStore";
 import { EventSubmit } from "./EventSubmit";
+import { Copy, Check, Clock, Zap, Hash } from "lucide-react";
+import { useState } from "react";
 
 export function ChatWindow() {
   const messages = useChatStore((s) => s.messages);
@@ -19,6 +21,9 @@ export function ChatWindow() {
           <div className="text-lg font-semibold">Start a conversation</div>
           <div className="mt-1 text-sm text-muted-foreground">
             Ask Gemma anything. Each inference is reported to the backend for monitoring + scoring.
+          </div>
+          <div className="mt-4 text-xs text-muted-foreground">
+            Tip: Press Enter to send, Shift+Enter for new line
           </div>
         </div>
       )}
@@ -40,6 +45,13 @@ export function ChatWindow() {
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  async function copyToClipboard() {
+    await navigator.clipboard.writeText(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   return (
     <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
@@ -53,6 +65,40 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         <div className="whitespace-pre-wrap">{msg.content}</div>
       </div>
 
+      {!isUser && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={copyToClipboard}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            title="Copy response"
+          >
+            {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+
+          {msg.latencyMs !== undefined && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="size-3" />
+              {msg.latencyMs}ms
+            </span>
+          )}
+
+          {msg.tokensOut !== undefined && msg.tokensOut > 0 && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Zap className="size-3" />
+              {msg.tokensOut} tokens
+            </span>
+          )}
+
+          {msg.modelId && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Hash className="size-3" />
+              {msg.modelId.replace("-q4f32_1-MLC", "")}
+            </span>
+          )}
+        </div>
+      )}
+
       {!isUser && msg.eventId && !msg.scored && (
         <EventSubmit
           eventId={msg.eventId}
@@ -64,12 +110,9 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
       )}
 
       {!isUser && msg.scored && (
-        <div className="text-xs text-muted-foreground">Scored</div>
-      )}
-
-      {!isUser && msg.latencyMs !== undefined && (
-        <div className="text-xs text-muted-foreground">
-          {msg.latencyMs}ms &middot; {msg.tokensIn} in / {msg.tokensOut} out
+        <div className="text-xs text-green-600 flex items-center gap-1">
+          <Check className="size-3" />
+          Scored
         </div>
       )}
     </div>

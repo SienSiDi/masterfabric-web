@@ -8,6 +8,7 @@ export interface ScoreInput {
   userSignal: "accept" | "reject" | "edit";
   editedText?: string;
   originalCompletion?: string;
+  modelId?: string;
 }
 
 export interface ScoreOutput {
@@ -17,7 +18,23 @@ export interface ScoreOutput {
   userSignalValue: number;
   safetyFlag: boolean;
   composite: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  breakdown: ScoreBreakdown;
 }
+
+export interface ScoreBreakdown {
+  correctness: { value: number; weight: number; label: string };
+  latency: { value: number; weight: number; label: string };
+  cost: { value: number; weight: number; label: string };
+  signal: { value: number; weight: number; label: string };
+}
+
+const WEIGHTS = {
+  correctness: 0.4,
+  latency: 0.2,
+  cost: 0.2,
+  signal: 0.2,
+};
 
 function computeCorrectness(
   userSignal: "accept" | "reject" | "edit",
@@ -25,11 +42,12 @@ function computeCorrectness(
   editedText?: string,
   originalCompletion?: string
 ): number {
-  if (userSignal === "accept") return 0.7;
-  if (userSignal === "reject") return 0.3;
+  if (userSignal === "accept") return 0.85;
+  if (userSignal === "reject") return 0.2;
   if (userSignal === "edit" && editedText && originalCompletion) {
     const editDistance = levenshtein(originalCompletion, editedText);
-    return Math.max(0, 1 - Math.min(1, editDistance / originalCompletion.length));
+    const similarity = 1 - Math.min(1, editDistance / originalCompletion.length);
+    return 0.3 + similarity * 0.5;
   }
   return 0.5;
 }
@@ -52,18 +70,35 @@ function levenshtein(a: string, b: string): number {
 }
 
 function computeLatencyScore(latencyMs: number): number {
-  if (latencyMs <= 5000) return 1;
-  return Math.max(0, 1 - (latencyMs - 5000) / 10000);
+  if (latencyMs <= 1000) return 1;
+  if (latencyMs <= 3000) return 0.9;
+  if (latencyMs <= 5000) return 0.7;
+  if (latencyMs <= 10000) return 0.5;
+  if (latencyMs <= 20000) return 0.3;
+  return Math.max(0, 0.3 - (latencyMs - 20000) / 30000);
 }
 
 function computeCostScore(tokensIn: number, tokensOut: number): number {
-  return Math.max(0, 1 - (tokensIn + tokensOut) / 4096);
+  const total = tokensIn + tokensOut;
+  if (total <= 256) return 1;
+  if (total <= 512) return 0.9;
+  if (total <= 1024) return 0.7;
+  if (total <= 2048) return 0.5;
+  return Math.max(0, 0.5 - (total - 2048) / 4096);
 }
 
 function computeUserSignalValue(signal: "accept" | "reject" | "edit"): number {
   if (signal === "accept") return 1;
   if (signal === "edit") return 0.6;
   return 0;
+}
+
+function computeGrade(composite: number): "A" | "B" | "C" | "D" | "F" {
+  if (composite >= 0.8) return "A";
+  if (composite >= 0.6) return "B";
+  if (composite >= 0.4) return "C";
+  if (composite >= 0.2) return "D";
+  return "F";
 }
 
 export function computeScore(input: ScoreInput): ScoreOutput {
@@ -80,7 +115,17 @@ export function computeScore(input: ScoreInput): ScoreOutput {
 
   const composite = safetyFlag
     ? 0
-    : 0.4 * correctness + 0.2 * latencyScore + 0.2 * costScore + 0.2 * userSignalValue;
+    : WEIGHTS.correctness * correctness +
+      WEIGHTS.latency * latencyScore +
+      WEIGHTS.cost * costScore +
+      WEIGHTS.signal * userSignalValue;
+
+  const breakdown: ScoreBreakdown = {
+    correctness: { value: correctness, weight: WEIGHTS.correctness, label: "Correctness" },
+    latency: { value: latencyScore, weight: WEIGHTS.latency, label: "Latency" },
+    cost: { value: costScore, weight: WEIGHTS.cost, label: "Cost Efficiency" },
+    signal: { value: userSignalValue, weight: WEIGHTS.signal, label: "User Signal" },
+  };
 
   return {
     correctness,
@@ -89,5 +134,7 @@ export function computeScore(input: ScoreInput): ScoreOutput {
     userSignalValue,
     safetyFlag,
     composite,
+    grade: computeGrade(composite),
+    breakdown,
   };
 }
