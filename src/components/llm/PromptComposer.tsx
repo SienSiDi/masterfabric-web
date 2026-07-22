@@ -27,6 +27,7 @@ export function PromptComposer() {
   const {
     streaming,
     sessionId,
+    messages,
     addMessage,
     updateLastAssistant,
     setStreaming,
@@ -70,9 +71,14 @@ export function PromptComposer() {
       }
 
       const t0 = performance.now();
+      const historyMessages = messages.slice(-20).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
       const response = await engine.chat.completions.create({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
+          ...historyMessages,
           { role: "user", content: prompt },
         ],
         stream: true,
